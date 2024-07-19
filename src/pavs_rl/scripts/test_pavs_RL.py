@@ -24,7 +24,7 @@ register(
 if __name__ == '__main__':
 
    
-    # ros_node.ros_kill_all_processes()
+    # ros_node.ros_kill_all_processes()gggg
   
     # ros_gazebo.launch_Gazebo(paused=False, gui=False)
   
