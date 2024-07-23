@@ -416,6 +416,37 @@ def gazebo_reset_world(retries=5) -> bool:
         
     return False
 
+
+def wait_for_model_deletion(model_name, timeout=5):
+    """
+    Function to wait for model deleted.
+    
+    :Param
+    ------- 
+        - model_name(string):   The name of model. 
+
+    :Return
+    -------
+        - (bool):               True if the model was deleted, False if timeout reached.
+        
+    """
+ 
+    rospy.wait_for_service('/gazebo/get_model_state')
+    get_model_state_srv = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+    start_time = rospy.get_time()
+    
+    while rospy.get_time() - start_time < timeout:
+        try:
+            resp = get_model_state_srv(model_name, "")
+            if not resp.success:
+                return True
+        except rospy.ServiceException:
+            pass
+        rospy.sleep(0.1)
+    
+    return False
+
+
 def gazebo_load_sdf(model_path):
     """
     Function to load sdf model to xml.
@@ -458,10 +489,6 @@ def gazebo_reset_goal(model_path, goal_position, retries=5) -> bool:
     
     model_name = "goal"
     
-    rospy.wait_for_service('/gazebo/spawn_sdf_model')
-    spawn_model_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
-    delete_model_srv = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
-    
     model_xml = gazebo_load_sdf(model_path)
     
     pose = Pose(position=Point(x=goal_position[0], y=goal_position[1], z=goal_position[2]), 
@@ -470,14 +497,19 @@ def gazebo_reset_goal(model_path, goal_position, retries=5) -> bool:
     for retry in range(retries):
         if not is_delete:
             try:
+                rospy.wait_for_service('/gazebo/delete_model')
+                delete_model_srv = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
                 delete_model_srv(model_name)
                 rospy.loginfo(f"Model {model_name} has been deleted.")
                 is_delete = True
+                rospy.sleep(0.3)        # wait for delete model complete
             except rospy.ServiceException as e:
                 rospy.logerr(f"Delete Model service call failed: {e}")
                 
         if not is_spawn:
             try:
+                rospy.wait_for_service('/gazebo/spawn_sdf_model')
+                spawn_model_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
                 spawn_model_srv(model_name, model_xml, "", pose, "world")
                 rospy.loginfo(f"Virtual cylinder Goal {model_name} has been spawned.")
                 is_spawn = True             
@@ -526,6 +558,7 @@ def gazebo_reset_obstacles(model_path, goal_position, retries=5) -> bool:
                 delete_model_srv(model_name)
                 rospy.loginfo(f"Model {model_name} has been deleted.")
                 is_delete = True
+                rospy.sleep(0.2)
             except rospy.ServiceException as e:
                 rospy.logerr(f"Delete Model service call failed: {e}")
                 
