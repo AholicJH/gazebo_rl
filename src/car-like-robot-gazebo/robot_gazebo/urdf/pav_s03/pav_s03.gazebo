@@ -107,9 +107,9 @@
           </vertical>
         </scan>
         <range>
-          <min>0.1</min>
-          <max>10.0</max>
-          <resolution>0.01</resolution>
+          <min>0.0</min>
+          <max>5.0</max>  <!-- 这里定义了最大测量距离 -->
+          <resolution>1</resolution>
         </range>
         <noise>
           <mean>0.0</mean>

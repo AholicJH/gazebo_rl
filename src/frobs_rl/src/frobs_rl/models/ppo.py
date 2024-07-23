@@ -50,6 +50,7 @@ class PPO(basic_model.BasicModel):
         if load_trained:
             rospy.logwarn("Loading trained model")
             self.model = stable_baselines3.PPO.load(save_model_path, env=env)
+            rospy.loginfo(self.model)
         else:
             #--- SDE for PPO
             if rospy.get_param(ns + "/model_params/use_sde"):
@@ -113,6 +114,6 @@ class PPO(basic_model.BasicModel):
         """
 
         model = PPO(env=env, save_model_path=model_path, log_path=model_path, load_trained=True)
-
+        
         return model
             

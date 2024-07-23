@@ -18,7 +18,7 @@
     </include>
 
     <!-- Spawn robot with init pose-->
-    <arg name="robot_name" default="pav_s01" doc="pav_s00, pav_s01, pav_s01_scaled"/>
+    <arg name="robot_name" default="pav_s03" doc="pav_s00, pav_s01, pav_s01_scaled"/>
 
     <arg name="x_pos" default="0"/>
     <arg name="y_pos" default="0"/>
@@ -43,14 +43,10 @@
                                                 left_steering_hinge_position_controller 
                                                 right_steering_hinge_position_controller
                                                 joint_state_controller"/>
-
         <!-- <node name="robot_state_publisher_node" pkg= "robot_state_publisher" type= "robot_state_publisher" respawn="false" output="screen"/> -->
-
         <!-- <node name="joint_state_publisher_node" pkg="joint_state_publisher" type="joint_state_publisher" respawn="false" output="screen"/> -->
-  
         <node name="gazebo_manager_node" pkg="robot_gazebo" type="gazebo_manager_node" output="screen"/>
-
-        <!-- <node name="keyboard_teleop" pkg="robot_gazebo" type="keyboard_teleop.py" output="screen"/> -->
-    
+        <!-- <node name="keyboard_teleop" pkg="robot_gazebo" type="keyboard_teleop.
+        py" output="screen"/> -->
     </group>
 </launch>

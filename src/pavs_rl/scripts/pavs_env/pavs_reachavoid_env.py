@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import random
 import gym
 import math
 from gym.envs.registration import register
@@ -9,14 +11,14 @@ from frobs_rl.common import ros_gazebo
 from frobs_rl.common import ros_controllers
 from frobs_rl.common import ros_node
 from frobs_rl.common import ros_spawn
+from gazebo_msgs.srv import SpawnModel, DeleteModel,GetModelState
+from std_srvs.srv import Empty
 from frobs_rl.envs.robot_BasicEnv import RobotBasicEnv
 import rospy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import numpy as np
 from gym import spaces
-
-
 
 
 class PavsReachAvoidEnv(RobotBasicEnv):
@@ -37,9 +39,9 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         如果使用自定义世界启动 Gazebo，请设置相应的环境变量。
         '''
         pkg_path = '/home/jianghan/gazebo_rl/gazebo_rl/src/car-like-robot-gazebo/robot_gazebo'
-        world_path = pkg_path +'/worlds/goal_world.world'
+        world_path = pkg_path +'/worlds/empty_obstacle.world'
         world_pkg = 'robot_gazebo'
-        world_filename = 'goal_world.world'
+        world_filename = 'empty_obstacle.world'
         
         gazebo_max_freq = 1
         gazebo_timestep = None
@@ -70,6 +72,7 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         reset_mode = 1
         step_mode = 1
         num_gazebo_steps = 100
+        
 
         super(PavsReachAvoidEnv, self).__init__(launch_gazebo=launch_gazebo, gazebo_init_paused=gazebo_init_paused, 
                                                 gazebo_use_gui=gazebo_use_gui, gazebo_recording=gazebo_recording,
@@ -86,30 +89,24 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         
        
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        rate = rospy.Rate(10)
         self.current_position = None
         self.pos_curr = np.zeros(3)  
         self.pos_prev = np.zeros(3)  
         self.laser_scan = np.zeros(60, dtype=np.float32) 
         
+        self.current_position = None
         rospy.Subscriber('/pav_s03/odom', Odometry, self.odom_callback)
-      
-        rospy.Subscriber('/scan', LaserScan, self.laser_scan_callback)
-        
+        self.lidar_subscriber = None
+        self.lidar_subscriber =rospy.Subscriber('/scan', LaserScan, self.laser_scan_callback)
+        # ROS 话题订阅
+        self.cmd_vel = None
+        rospy.Subscriber('/cmd_vel', Twist, self.cmd_vel_callback)
+  
+        self.reset_times = 0
+
         self.rate = rospy.Rate(10)  # 10 Hz
-        self.positon_obstacle =  [
-            [10.120900, -4.616070, 0.315032],
-            [8.476070, -8.359580, 0.153570],
-            [7.260040, 4.277960, 0.239029],
-            [4.580360, 0.944566, 0.383762],
-            [0.790650, 7.352590, 0.358593],
-            [1.296639, -2.888562, 0.392052],
-            [2.000000, -6.000000, 0.014020],
-            [-5.611890, 4.459350, 0.378775],
-            [-6.271170, 1.438670, 0.349874],
-            [-6.573570, -4.581410, 0.263004]
-        ]  # 初始化障碍物位置
         
+
         '''
         定义状态空间和动作空间
         '''
@@ -118,23 +115,46 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
         # 定义动作空间
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
-
-
-        self.car_velocity = np.array([0.0, 0.0], dtype=np.float32)  # 初始速度
-
+    
         self.robot_position = np.array([0, 0, 0], dtype=np.float32)  # 机器人初始位置
-        self.target_position = np.array([2.000000, -6.000000, 0.014020], dtype=np.float32)  # 目标位置
-     
-        # 初始化步数计数器
+        # self.target_position = np.array([2.000000, -6.000000, 0.000131], dtype=np.float32)  # 目标位置
+
+        # 设置初始目标点
+        self.initial_target_position = np.array([2.000000, -2.000000, 0.000131], dtype=np.float32)  # 目标位置
+        self.target_position =  self.initial_target_position
+        self.reset_target_positon = False
+        # 初始化步数计数器2 -6 0.000131
         self.current_step = 0  
+         # 生成并显示初始目标点
+
 
         rospy.loginfo("Finished Init of PAVS RL Environment")
+        # ros_gazebo.gazebo_pause_physics()
 
+    def cmd_vel_callback(self,msg):
+
+        self.cmd_vel = msg
+        
     def _set_episode_init_params(self):
 
         self.current_position = self.robot_position.copy()
-        self.target_position = np.array([2.000000, -6.000000, 0.014020], dtype=np.float32)
-        self.car_velocity = np.array([0.0, 0.0], dtype=np.float32)
+        self.target_position = self.initial_target_position
+        self.pos_curr = np.zeros(3)  
+        self.pos_prev = np.zeros(3)  
+        # 重置雷达
+        if hasattr(self, 'lidar_subscriber'):
+            self.lidar_subscriber.unregister()
+            rospy.loginfo("Unregistered previous lidar subscriber")
+            del self.lidar_subscriber
+        # 确保雷达订阅器在重新订阅之前已取消订阅
+        rospy.sleep(1.0)  # 增加等待时间确保订阅器取消
+
+        # 重新初始化雷达数据
+        self.laser_scan = np.zeros(60, dtype=np.float32)   # 清空旧的数据
+
+        # 重新订阅雷达数据
+        self.lidar_subscriber = rospy.Subscriber('/scan', LaserScan, self.laser_scan_callback)
+
 
     def _reset_gazebo(self):
             """
@@ -143,13 +163,13 @@ class PavsReachAvoidEnv(RobotBasicEnv):
             # If resetting world (Does not reset time)
             if self.reset_mode == 1:
                 ros_gazebo.gazebo_reset_world()
+
                 rospy.logwarn("重置world")
+                
             
             # If resetting simulation (Resets time)
             elif self.reset_mode == 2:
                 ros_gazebo.gazebo_reset_sim()
-           
-
             if self.reset_controllers:
                 ros_gazebo.gazebo_unpause_physics()
                 ros_controllers.reset_controllers_srv(self.controllers_list, ns=self.namespace)
@@ -163,40 +183,28 @@ class PavsReachAvoidEnv(RobotBasicEnv):
             ros_gazebo.gazebo_unpause_physics()
 
     def reset(self):
-        # 重置环境到初始状态
+        
         rospy.loginfo("Reset PAVS RL Environment Resource!")
-        #  ros_gazebo.gazebo_pause_physics()
         self._reset_gazebo()
-
         obs = self._get_observation()
         return obs
-        # return True
     
-
     def step(self, action):
-        # 执行动作并返回新的状态、奖励、是否终止和附加信息
-         # 处理雷达数据
-        done = False
-        
-        # laser_data = self._process_laser_scan()
-        # 根据雷达数据修改动作
-        # action = self.decide_action(laser_data, action)        
+
+        self.info = {} 
         self._send_action(action)
-        # self._step_simulation()
+        rospy.sleep(0.1)  # 等待 100 毫秒，确保 cmd_vel 更新
         obs = self._get_observation()
+        
         reward = self._get_reward()
-        # done = self._is_done()
-        self.current_step += 1  # 增加当前时间步
+
         done = self._check_if_done()
-        # 添加附加信息
-        info = {}  # 初始化 info 为空字典
-        info['time_step'] = self.current_step  # 设置当前时间步数
-       
-        self.rate.sleep()  # 按照设定的频率暂停
-         # 检查是否达到终止条件
-        return obs, reward, done, info  
-        # return info  
-    
+
+        self.current_step += 1  # 增加当前时间步
+
+        
+        return obs, reward, done, self.info  
+        
     
     def render(self, mode='human'):
         # 可视化环境，可选方法
@@ -206,22 +214,6 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         # 清理环境资源，可选方法
         # 停止ROS节点
         rospy.signal_shutdown("Environment closed")
-
-    def _check_subs_and_pubs_connection(self):
-        """
-        Function to check if the Gazebo and ROS connections are ready
-        """
-        return True
-    
-    def decide_action(self, laser_data, original_action):
-        min_left, min_front, min_right = laser_data
-        
-        if min_front < 0.5:
-            if min_left > min_right:
-                return np.array([-0.3, 0.3])  # 左转
-            else:
-                return np.array([0.3, -0.3])  # 右转
-        return original_action  # 保持原来的动作
     
 
     def _send_action(self, action):
@@ -229,52 +221,26 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         """
         将动作发送到机器人控制器或仿真环境中
         """
-        linear_velocity = action[0]   #获取线速度
-        angular_velocity = action[1]  #获取角速度
-        # rospy.loginfo(f"Linear Velocity: {linear_velocity}, Angular Velocity: {angular_velocity}")
-         # 创建一个Twist消息对象
+        linear_velocity = action[0]   
+        angular_velocity = action[1]  
         twist_cmd = Twist()
-         # 设置线速度和角速度
-        twist_cmd.linear.x = linear_velocity  # linear_velocity 是线速度
-        twist_cmd.angular.z = angular_velocity  # angular_velocity 是角速度
-         # 发布速度控制命令到/cmd_vel主题
-       
-        self.cmd_vel_publisher.publish(twist_cmd)
-        # 控制发布频率
-        # self.rate.sleep()
-    
-    def _process_laser_scan(self):
-        '''
-        通过将雷达数据分为三个部分：左侧、中间和右侧，并获取每个部分的最小距离,从而判断障碍物的分布情况
-        '''
-        while self.laser_scan is None:
-                rospy.sleep(0.1)
-
-        third_len = len(self.laser_scan) // 3
-        left_sector = self.laser_scan[:third_len]
-        front_sector = self.laser_scan[third_len:2*third_len]
-        right_sector = self.laser_scan[2*third_len:]
-        min_left = np.min(left_sector)
-        min_front = np.min(front_sector)
-        min_right = np.min(right_sector)
-
-        return np.array([min_left, min_front, min_right])
-
-    def _get_observation(self):
-   
-
-        
          
-        # 将处理后的
-        # self.laser_scan = self._process_laser_scan()
-        # 组合观测值
-        # observation = {
-        #     'current_position': self.current_position,
-        #     'goal_position': self.target_position,
-        #     'laser_scan': self.laser_scan
-        # }
+        twist_cmd.linear.x = linear_velocity  
+        twist_cmd.angular.z = angular_velocity  
         
-        observation = np.concatenate((self.current_position, self.target_position,self.laser_scan))
+        self.cmd_vel_publisher.publish(twist_cmd)
+    
+    def _stop_robot(self):
+        # 发布停止指令
+        vel_msg = Twist()
+        vel_msg.linear.x = 0.0
+        vel_msg.angular.z = 0.0
+        self.cmd_vel_publisher.publish(vel_msg)
+    
+    def _get_observation(self):
+        
+        observation = np.concatenate((self.current_position, self.target_position, np.ravel(self.laser_scan)))
+        # observation = np.concatenate((self.current_position, self.target_position))
         # 返回观测值
         return observation
 
@@ -283,136 +249,82 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         """
         从环境中获得奖励的功能。
         """
-         # 控制发布频率
-        # self.rate.sleep()
         reward = 0.0
         dist_prev = np.linalg.norm(np.array(self.pos_prev) - np.array(self.target_position))
         dist_curr = np.linalg.norm(np.array(self.pos_curr) - np.array(self.target_position))
-        # rospy.logwarn(f"Distance from previous position to target: {dist_prev}")
-        # rospy.logwarn(f"Distance from current position to target: {dist_curr}")
-        # reward_goal = 10 * (dist_curr - dist_prev)   # goal reward. close to goal, reward_goal is larger, else negative.
-        # reward += reward_goal
+        reward_goal = dist_prev - dist_curr  
+        reward += reward_goal
+        
+        # reward += 1.0 / (dist_curr + 1e-5)
 
-        if dist_curr < dist_prev:
-            reward += 10  # 如果机器人接近目标，则给予积极奖励
-        else:
-            reward -= 10  # 如果机器人远离目标，则给予负奖励
-
-        # rospy.loginfo("Reward Of Pavs03 ：  " + str(reward))
-        # 碰撞惩罚
-        # if self._check_collision():
-        #   rospy.logwarn("发送碰撞")
-        #   reward -= 10  # 如果发生碰撞，则给予大的负奖励
-        #   rospy.loginfo("Reward Of Pavs03 ：  " + str(reward))  # 将 reward 转换为字符串
+        if dist_curr < 0.5:  # 假设0.2米为成功到达目标的阈值
+            reward += 1  # 给予一个额外的正奖励
+            rospy.logwarn("Goal reached, additional reward: 1")
+            rospy.loginfo("Reward ：  " + str(reward)+" dist_prev:"+str(dist_prev)+"  dist_curr:"+str(dist_curr)+"  step"+str(self.current_step))
+            # self.current_step = 0
 
 
-        # 终止条件额外奖励
-        if dist_curr < 0.1:  # 假设0.1米为成功到达目标的阈值
-            reward += 50  # 给予一个额外的正奖励
-            rospy.loginfo("Goal reached, additional reward: 50")
+         # 检测障碍物的函数
+        if self._check_collision():
+            # 给一个负的奖励
+            reward_obs = -1  # obstacle reward, negative value.
+            reward += reward_obs
+            rospy.logwarn("reach obstacle, additional reward: -1")
+            rospy.loginfo("Reward ：  " + str(reward)+" dist_prev:"+str(dist_prev)+"  dist_curr:"+str(dist_curr)+"  step"+str(self.current_step))
         
         
+        # rospy.loginfo("Reward ：  " + str(reward)+" dist_prev:"+str(dist_prev)+"  dist_curr:"+str(dist_curr)+"  step"+str(self.current_step))
         return reward
     
-
-        # if self._obstacle_detection():
-        #     self.reward_obs = -1  # obstacle reward, negative value.
-        #     self.reward += self.reward_obs
-        #     is_collision = True
-        # else:
-        #     is_collision = False
-
-        # return is_collision
-
-
-        # reward = 0
-        # distance_to_target = np.linalg.norm(self.current_position - self.target_position)
-        # reward = -distance_to_target
-        # if distance_to_target < 1.0:
-        #     # rospy.logwarn("给与奖励：" + str(reward))
-        #     reward += 10
-        #     rospy.logwarn("给与奖励：" + str(reward))
-        # rospy.loginfo("Reward Of Pavs03 ：  " + str(reward))  # 将 reward 转换为字符串
-       
-        # # 检测与障碍物的距离
-        # # if self._obstacle_detection():
-        # if self._check_collision():
-        #    rospy.logwarn("发送碰撞")
-        #    reward -= 10  # 如果发生碰撞，则给予大的负奖励
-        #    rospy.loginfo("Reward Of Pavs03 ：  " + str(reward))  # 将 reward 转换为字符串
-        #    # done
-
-        # return reward
-    
-    def _set_obstacle(self, positions):
-
-        self.positon_obstacle = []
-        for pos in positions:
-            self.positon_obstacle.append(pos)
-
     def _check_collision(self):  
         '''
         检查雷达数据，判断是否与障碍物发生碰撞
         '''
-        collision_threshold = 0.2  # 碰撞距离阈值
-       
-        if np.any(self.laser_scan < collision_threshold):
+        collision_threshold = 0.25  # 碰撞距离阈值
+        # 过滤掉超出范围的距离值（例如 NaN 或 Inf）
+        #rospy.loginfo("LaserScan Range: %s", str(self.laser_scan))
+        valid_distances = self.laser_scan[np.isfinite(self.laser_scan)& (self.laser_scan != 5)]
+        # rospy.loginfo("valid_distances: %s", str(valid_distances))
+        # 检查是否有障碍物在阈值距离内
+        self.obstacles_within_threshold = valid_distances[valid_distances < collision_threshold]
+        
+        if len(self.obstacles_within_threshold) != 0:
+            rospy.logwarn("obstacles_within_threshold: %s", str(self.obstacles_within_threshold))
+            self._stop_robot()
             return True
+        
         return False
-  
-
-    def _obstacle_detection(self):
-       
-        is_collision = False
-
-        d_min = float('inf')
-        for pos in self.positon_obstacle:
-            d = np.linalg.norm(np.array(self.current_position[:2]) - np.array(pos[:2]))
-            if d < d_min:
-                d_min = d
-
-        if d_min < 0.1:
-            is_collision = True
-
-        return is_collision
-
+         
+        
     def _check_if_done(self):
         '''
         检查是否完成
         '''
-        done = False
+        done, is_reach, is_collision = False, False, False
         self.info = {'is_success': 0.0}
 
-        goal_threshold = 0.15
+        goal_threshold = 0.5
         distance_goal = np.linalg.norm(np.array(self.current_position) - np.array(self.target_position))
-
         if distance_goal < goal_threshold:
-            done = True
+            is_reach = True
             self.info['is_success'] = 1.0
-            ros_gazebo.gazebo_pause_physics()
-            return done
+            rospy.logwarn("The Car is arrvided successfully.")
+        
+        if len(self.obstacles_within_threshold) != 0:
+            is_collision = True
+            self.info['is_success'] = 1.0
+            rospy.logwarn("The Car is collisioned ！ .")
 
-        obstacle_threshold = 0.2
+        done = is_reach or is_collision
 
-        for obs in self.positon_obstacle:
-            distance_obstacle = np.linalg.norm(np.array(self.current_position) - np.array(obs))
-            if distance_obstacle < obstacle_threshold:
-                done = True
-                return done
-            
-        if self.current_step == 200:
-        # if self.current_step % 100 == 0:
-            done = True
-            self.current_step = 0 #重置步数计数器
-            rospy.logwarn("Episode done: Reached 200 steps.")
+        if done:
+            self.reset_times += 1
+            rospy.logwarn(f"early reset = {self.reset_times}.")
 
         #rospy.loginfo("标志位是："+str(done)+"执行steps数:"+str(self.current_step))
         return done
     
     def odom_callback(self, msg):
-        '''
-        获取里程计信息
-        '''
         self.current_position = np.array([msg.pose.pose.position.x,
                                       msg.pose.pose.position.y,
                                       msg.pose.pose.position.z])
@@ -420,49 +332,11 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         self.pos_prev = self.pos_curr.copy()
 
         self.pos_curr = self.current_position.copy()
-        # rospy.loginfo(f"pos_prev to target: {self.pos_prev}")
-        # rospy.loginfo(f"pos_curr to target: {self.pos_curr}")
 
     def laser_scan_callback(self, msg):
-        '''
-        获取雷达信息
-        '''
-        # self.laser_scan = msg
-        # 处理雷达数据，获取有效距离数据
+
         ranges = np.array(msg.ranges)
         ranges[ranges == float('inf')] = msg.range_max  # 将无穷远值替换为最大测量距离
         self.laser_scan = ranges
-        # rospy.loginfo(f" pos lidar data")
-
-    def _is_done(self):
-        distance_to_target = np.linalg.norm(self.current_position - self.target_position)
-        if distance_to_target < 0.1:
-            return True
-        return False
-
-    def _step_simulation(self):
-        '''
-        在模拟仿真过程中会每隔0.1秒执行一次暂停
-        '''
-        rospy.sleep(0.1)
-
-    def laser_callback(self, data):
-        self.laser_scan = data
-
-if __name__ == "__main__":
-    env = PavsReachAvoidEnv()
-
-    # 测试reset()方法
-    obs = env.reset()
-    print("初始观测值：", obs)
-
-    # 执行几个动作步骤
-    for _ in range(1000):
-        action = env.action_space.sample()  # 随机选择一个动作
-        obs, reward, done, _ = env.step(action)
-        print(f"动作：{action}, 新的观测值：{obs}, 奖励：{reward}, 是否终止：{done}")
-        if done:
-            break
-
-    env.close()
-
+    
+   

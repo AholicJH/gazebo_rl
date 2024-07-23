@@ -24,8 +24,9 @@ def load_controller_srv(controller_name, ns=None, max_retries=5) -> bool:
         srv_name = ns + '/controller_manager/load_controller'
     else:
         srv_name = '/controller_manager/load_controller'
-
+    
     rospy.wait_for_service(srv_name)
+    
     client_srv = rospy.ServiceProxy(srv_name, LoadController)
     
     try: 
@@ -302,9 +303,8 @@ def spawn_controllers_srv(spawn_controllers, ns=None, strictness=1, start_asap=F
     :return: true if the operation is successful.
     :rtype: bool
     """
-
+    rospy.loginfo("执行是否")
     load_controller_list_srv(spawn_controllers, ns=ns)
-    rospy.loginfo("成功答应数据！")
 
     return start_controllers_srv(spawn_controllers, ns=ns, strictness=strictness, start_asap=start_asap, timeout=timeout)
 

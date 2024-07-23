@@ -416,6 +416,136 @@ def gazebo_reset_world(retries=5) -> bool:
         
     return False
 
+def gazebo_load_sdf(model_path):
+    """
+    Function to load sdf model to xml.
+    
+    :Param
+    ------- 
+        - model_path(string):   The path of sdf model. 
+
+    :Return
+    -------
+        - model_xml(string):    xml file string.
+        
+    """
+    
+    with open(model_path, 'r') as model_file:
+            model_xml = model_file.read()
+            
+    return model_xml
+
+
+def gazebo_reset_goal(model_path, goal_position, retries=5) -> bool:
+    """
+    Function to reset the goal position, which reset models to original poses WITHOUT resetting the simulation time.
+    
+    :Param
+    ------- 
+        - model_path:               The path of goal sdf model.
+        - goal_position(list(3)):   The goal position. 
+        - retries(int):             The number of times to retry the service call.
+
+    :Return
+    -------
+        - is_reset(bool): True if the command was sent and False otherwise.
+        
+    """
+    
+    is_reset = False
+    # is_delete = True
+    is_spawn = False
+    
+    model_name = "goal"
+    
+
+    rospy.wait_for_service('/gazebo/spawn_sdf_model')
+    rospy.wait_for_service('/gazebo/delete_model')
+    spawn_model_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
+    delete_model_srv = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+    
+    model_xml = gazebo_load_sdf(model_path)
+    
+    pose = Pose(position=Point(x=goal_position[0], y=goal_position[1], z=goal_position[2]), 
+                orientation=Quaternion(x=0, y=0, z=0, w=1))
+    
+    for retry in range(retries):
+        # if not is_delete:
+        #     try:
+        #         delete_model_srv(model_name)
+        #         rospy.loginfo(f"Model {model_name} has been deleted.")
+        #         is_delete = True
+        #         rospy.sleep(0.5)  # 添加延时确保状态更新
+        #     except rospy.ServiceException as e:
+        #         rospy.logerr(f"Delete Model service call failed: {e}")
+                
+        if not is_spawn:
+            try:
+                spawn_model_srv(model_name, model_xml, "", pose, "world")
+                rospy.loginfo(f"Virtual cylinder Goal {model_name} has been spawned.")
+                is_spawn = True             
+            except rospy.ServiceException as e:
+                rospy.logerr(f"Spawn Model service call failed: {e}")
+    
+    # is_reset = is_delete and is_spawn
+    is_reset = is_spawn
+    
+    return is_reset
+
+
+def gazebo_reset_obstacles(model_path, goal_position, retries=5) -> bool:
+    """
+    Function to reset the goal position, which reset models to original poses WITHOUT resetting the simulation time.
+    
+    :Param
+    ------- 
+        - model_path(string):           The path of obstacle sdf model.
+        - obstacle_position(list(3)):   The goal position. 
+        - retries(int):                 The number of times to retry the service call.
+
+    :Return
+    -------
+        - is_reset(bool): True if the command was sent and False otherwise.
+        
+    """
+    
+    is_reset = False
+    is_delete = False
+    is_spawn = False
+    
+    model_name = "obstacle_rectagular"
+    
+    rospy.wait_for_service('/gazebo/spawn_sdf_model')
+    spawn_model_srv = rospy.ServiceProxy('/gazebo/spawn_sdf_model', SpawnModel)
+    delete_model_srv = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
+    
+    model_xml = gazebo_load_sdf(model_path)
+    
+    pose = Pose(position=Point(x=goal_position[0], y=goal_position[1], z=goal_position[2]), 
+                orientation=Quaternion(x=0, y=0, z=0, w=1))
+    
+    for retry in range(retries):
+        if not is_delete:
+            try:
+                delete_model_srv(model_name)
+                rospy.loginfo(f"Model {model_name} has been deleted.")
+                is_delete = True
+            except rospy.ServiceException as e:
+                rospy.logerr(f"Delete Model service call failed: {e}")
+                
+        if not is_spawn:
+            try:
+                spawn_model_srv(model_name, model_xml, "", pose, "world")
+                rospy.loginfo(f"Physcial Rectagular Obstacles {model_name} has been spawned.")
+                is_spawn = True             
+            except rospy.ServiceException as e:
+                rospy.logerr(f"Spawn Model service call failed: {e}")
+    
+    is_reset = is_delete and is_spawn
+    
+    return is_reset
+
+
 def gazebo_pause_physics(retries=5) -> bool:
     """
     Function to pause the physics in the simulation.
