@@ -8,7 +8,11 @@
             <geometry>
                 <cylinder>
                 <radius>0.5</radius>
+<<<<<<< HEAD
                 <length>0.4</length>
+=======
+                <length>0.8</length>
+>>>>>>> 366d94b8108f8ad079f62cb7ebe99d75ed3273bd
                 </cylinder>
             </geometry>
             <material>
@@ -20,7 +24,11 @@
             <geometry>
             <cylinder>
                 <radius>0.2</radius>
+<<<<<<< HEAD
                 <length>0.4</length>
+=======
+                <length>1.0</length>
+>>>>>>> 366d94b8108f8ad079f62cb7ebe99d75ed3273bd
             </cylinder>
             </geometry>
             <surface>

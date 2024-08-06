@@ -47,9 +47,14 @@ if __name__ == '__main__':
             
             rospy.loginfo_once(f"Reset obstacles {is_reset_goal}")
             
+<<<<<<< HEAD
              # 打印倒计时
             for remaining_time in range(10, 0, -1):
                 rospy.loginfo(f"Waiting... {remaining_time} seconds remaining")
                 rospy.sleep(1)
+=======
+            rospy.sleep(5)
+    
+>>>>>>> 366d94b8108f8ad079f62cb7ebe99d75ed3273bd
     rospy.spin()
     
