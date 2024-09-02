@@ -21,6 +21,7 @@ from gym import spaces
 
 class PavsReachAvoidEnv(RobotBasicEnv):
 
+
     def __init__(self):
 
         rospy.loginfo(f"\033[94m PAVS RL Environment initializing.\033[0m")

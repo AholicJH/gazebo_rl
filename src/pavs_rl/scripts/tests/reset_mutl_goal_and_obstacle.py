@@ -18,6 +18,7 @@ def get_random_position(exclude_positions, min_distance, x_range=(-10, 10), y_ra
         - exclude_positions: List of positions to exclude.
         - min_distance: Minimum distance from any excluded position.
         - x_range: Range for x-coordinate.
+        
         - y_range: Range for y-coordinate.
         
     :Return

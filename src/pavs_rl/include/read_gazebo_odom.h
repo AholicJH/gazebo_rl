@@ -18,6 +18,7 @@ class OdomReader {
     robot_name_ = ros::this_node::getNamespace();
     robot_name_ = robot_name_.substr(1, robot_name_.length());
     tf_broadcaster_ = tf2_ros::TransformBroadcaster();
+    
     odom_pub_ = nh.advertise<nav_msgs::Odometry>("odom", 1);
     link_state_sub_ = nh.subscribe("/gazebo/link_states", 1,
                                    &OdomReader::stateCallback, this);

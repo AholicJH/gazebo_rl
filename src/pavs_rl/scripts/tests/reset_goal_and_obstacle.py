@@ -14,6 +14,7 @@ def get_random_position(exclude_positions, min_distance, x_range=(-10, 10), y_ra
     Generate a random position within the specified range that is at least `min_distance` away from excluded positions.
     
     :Param
+    
     -------
         - exclude_positions: List of positions to exclude.
         - min_distance: Minimum distance from any excluded position.

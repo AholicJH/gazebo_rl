@@ -36,6 +36,7 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         gazebo_freq = 10
         '''
         如果使用自定义世界启动 Gazebo，请设置相应的环境变量。
+        
         '''
         pkg_path = '/home/jianghan/gazebo_rl/gazebo_rl/src/car-like-robot-gazebo/robot_gazebo'
         world_path = pkg_path +'/worlds/empty_obstacle_randomgoal.world'

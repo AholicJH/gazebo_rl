@@ -10,6 +10,8 @@ from gazebo_msgs.srv import SpawnModel, DeleteModel,GetWorldProperties
 from gazebo_msgs.msg import ModelState
 from geometry_msgs.msg import Pose, Point, Quaternion
 
+
+
 def load_model(model_path):
     with open(model_path, 'r') as model_file:
         model_xml = model_file.read()

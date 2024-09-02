@@ -17,6 +17,7 @@ from frobs_rl.wrappers.PavsTimeLimitWrapper import PavsTimeLimitWrapper
 from gym import register
 
 register(
+    
     id='PavsReachAvoidEnv-v0',
     entry_point='pavs_env.pavs_reachavoid_env:PavsReachAvoidEnv',
     max_episode_steps=100,

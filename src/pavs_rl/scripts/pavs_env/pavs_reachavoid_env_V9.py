@@ -55,6 +55,7 @@ class PavsReachAvoidEnv(RobotBasicEnv):
         urdf_folder ='/urdf/pav_s03'
         controller_file = 'controller_manager/pav_s03_motor_ctrl_config.yaml'
         # controller_file = 'pav_s00_motor_ctrl_config.yaml'
+        
         controller_list = ['left_front_wheel_velocity_controller',
                            'right_front_wheel_velocity_controller',
                            'right_rear_wheel_velocity_controller',

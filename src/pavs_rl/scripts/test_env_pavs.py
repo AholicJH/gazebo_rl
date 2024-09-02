@@ -16,6 +16,7 @@ register(
 
 class RLEnvTester:
     def __init__(self):
+        
         rospy.init_node('pavs_env_tester', anonymous=True)
         self.env = gym.make('PavsReachAvoidEnv-v0')
         rospy.loginfo("测试功能！！init")

@@ -16,6 +16,7 @@ register(
     max_episode_steps=1000,
 )
 
+
 class RLEnvTester(PavsReachAvoidEnv):
     def __init__(self):
 

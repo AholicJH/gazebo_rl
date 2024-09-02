@@ -23,6 +23,8 @@ if __name__ == '__main__':
     delete_model_service = rospy.ServiceProxy('/gazebo/delete_model', DeleteModel)
     
     rospy.loginfo("Services are available")
+
+    
     
     rospack = rospkg.RosPack()
     pkg_path = rospack.get_path("pavs_rl")

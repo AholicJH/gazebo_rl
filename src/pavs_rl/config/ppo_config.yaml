@@ -12,6 +12,7 @@ model_params:
   # Load model params
   load_model: False
   model_name: ppo_model_10000_steps
+  
 
   # Logging parameters
   log_folder: PPO_1

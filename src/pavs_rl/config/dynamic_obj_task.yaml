@@ -10,6 +10,7 @@ pavs_robot:
   time_step: 0.01
   update_rate_multiplier: 10.0 # If training multiply the max update rate by this number 
 
+
   #-----------------------------------------------------------------------------------------#
   #--- Set goal pos parameters
 

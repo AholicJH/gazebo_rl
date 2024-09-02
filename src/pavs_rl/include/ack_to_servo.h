@@ -12,6 +12,7 @@ class AckToServo {
   void init(ros::NodeHandle& nh) {
     ack_sub_ = nh.subscribe("pav_s00/ackermann_cmd_mux/output", 1,
                             &AckToServo::ackCallback, this);
+                            
     cmd_vel_sub_ =
         nh.subscribe("/cmd_vel", 1, &AckToServo::cmdVelCallback, this);
     pub_vel_left_rear_wheel = nh.advertise<std_msgs::Float64>(
