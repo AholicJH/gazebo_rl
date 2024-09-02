@@ -27,7 +27,7 @@ model_params:
     optimizer_class: Adam # Adam, Adadelta, Adagrad, RMSprop or SGD
 
   # Use SDE
-  use_sde: True
+  use_sde: False
   sde_params:
     sde_sample_freq: 100
   # PPO parameters

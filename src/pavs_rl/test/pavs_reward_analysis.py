@@ -12,8 +12,8 @@ pkg_path = rospack.get_path("pavs_rl")
 # 指定 TD3 保存路径
 save_path_td3 = os.path.join(pkg_path, "logs", "td3", "TD3_1_31_07_2024_10_20_01", "progress.csv")
 # 指定 PPO 保存路径
-save_path_ppo = os.path.join(pkg_path, "logs", "ppo", "PPO_1_31_07_2024_14_49_36", "progress.csv")
-
+#save_path_ppo = os.path.join(pkg_path, "logs", "ppo", "PPO_1_31_07_2024_14_49_36", "progress.csv")
+save_path_ppo = os.path.join(pkg_path, "logs", "PPO", "PPO_1", "progress.csv")
 # 读取 TD3 CSV 文件
 data_td3 = pd.read_csv(save_path_td3)
 # 读取 PPO CSV 文件

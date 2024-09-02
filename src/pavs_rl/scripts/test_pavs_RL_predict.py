@@ -5,9 +5,6 @@ import gym
 from gym import register
 import numpy as np
 import rospkg
-
-
-from frobs_rl.common import ros_gazebo, ros_node
 from frobs_rl.models.ppo import PPO
 from frobs_rl.models.td3 import TD3
 from frobs_rl.wrappers.NormalizeActionWrapper import NormalizeActionWrapper
@@ -41,11 +38,16 @@ if __name__ == '__main__':
     # save_path = pkg_path + "/models/td3/"+"trained_model_25_07_2024_21_16_20"  x效果较好？
     # save_path = pkg_path + "/models/td3/"+"trained_model_26_07_2024_09_43_09"
     # save_path = pkg_path + "/models/td3/"+"trained_model_26_07_2024_17_34_13" 
-    save_path = pkg_path + "/models/ppo/"+"trained_model_02_08_2024_20_14_51"
+    # save_path = pkg_path + "/models/ppo/"+"trained_model_02_08_2024_20_14_51"
+    '''
+    TD3_1_06_08_2024_09_42_19   
+    trained_model_06_08_2024_11_44_43
+    '''
+
     
-    # save_path = pkg_path + "/models/ppo/"+"trained_model_31_07_2024_16_42_27"
-    # model = TD3.load_trained(save_path)
-    model = PPO.load_trained(save_path)
+    save_path = pkg_path + "/models/TD3/"+"trained_model_06_08_2024_11_44_43"
+    model = TD3.load_trained(save_path)
+    # model = PPO.load_trained(save_path)
     obs = env.reset()
     episodes = 20
     epi_count = 0

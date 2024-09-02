@@ -15,7 +15,7 @@ model_params:
 
   # Logging parameters
   log_folder: TD3_1
-  log_interval: 2 # The number of episodes between logs
+  log_interval: 6 # The number of episodes between logs
   reset_num_timesteps: False # If true, will reset the number of timesteps to 0 every training 
 
   # Use custom policy - Only MlpPolicy is supported (Only used when new model is created)
@@ -45,5 +45,5 @@ model_params:
     target_policy_noise: 0.2
     target_noise_clip: 0.5
     train_freq:
-      freq: 500
+      freq: 600
       unit: step  # episode or step

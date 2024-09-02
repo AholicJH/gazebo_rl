@@ -10,7 +10,8 @@ rospack = rospkg.RosPack()
 pkg_path = rospack.get_path("pavs_rl")
 
 # 指定保存路径
-save_path = os.path.join(pkg_path, "logs", "td3", "TD3_1_31_07_2024_10_20_01", "progress.csv")
+#save_path = os.path.join(pkg_path, "logs", "TD3", "TD3_1_06_08_2024_09_42_19", "progress.csv")
+save_path = os.path.join(pkg_path, "logs", "PPO", "PPO_1", "progress.csv")
 
 # 读取 CSV 文件
 data = pd.read_csv(save_path)
@@ -36,3 +37,7 @@ plt.title('Episode Reward Mean vs Total Timesteps')
 plt.legend()
 plt.grid(True)
 plt.show()
+# 保存图形到指定路径
+#image_save_path = os.path.join(pkg_path, "logs", "TD3", "TD3_1_06_08_2024_09_42_19", "reward_plot.png")
+image_save_path =  os.path.join(pkg_path, "logs", "PPO", "PPO_1", "reward_plot.png")
+plt.savefig(image_save_path)
