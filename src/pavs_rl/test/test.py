@@ -5,6 +5,7 @@ import numpy as np
 class YourClass:
     def __init__(self):
         # 初始化ROS节点
+        #fdfdf
         rospy.init_node('position_logger', anonymous=True)
 
         # 初始化位置变量
